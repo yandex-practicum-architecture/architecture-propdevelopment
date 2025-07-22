@@ -1,0 +1,176 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: default # Убедиться, что это наш текущий namespace
+spec:
+  podSelector: {} # Применяется ко всем подам в данном namespace
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress: [] # Запретить весь входящий трафик
+  egress: [] # Запретить весь исходящий трафик
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: default
+spec:
+  podSelector: {} # Применяется ко всем подам
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+      - namespaceSelector: {} # Разрешить к подам в любом namespace
+        podSelector:
+          matchLabels:
+            k8s-app: kube-dns # Или coredns, в зависимости от вашей установки
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Политика для front-end-app: Разрешает ему отправлять запросы back-end-api-app
+# и принимать от него ответы (обратный трафик по установленным соединениям).
+# А также явное разрешение входящего трафика от back-end-api-app для двустороннего обмена.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: front-end
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: back-end-api
+      ports:
+        - protocol: TCP
+          port: 80 # Порт, на котором слушает Nginx
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              role: back-end-api
+      ports:
+        - protocol: TCP
+          port: 80 # Порт, на который мы отправляем запросы
+---
+# Политика для back-end-api-app: Разрешает ему отправлять запросы front-end-app
+# и принимать от него ответы (обратный трафик по установленным соединениям).
+# А также явное разрешение входящего трафика от front-end-app для двустороннего обмена.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-frontend
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: back-end-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: front-end
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              role: front-end
+      ports:
+        - protocol: TCP
+          port: 80
+---
+# Политика для admin-front-end-app: Разрешает ему отправлять запросы admin-back-end-api-app
+# и принимать от него ответы, а также явное разрешение входящего трафика.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-admin-frontend-to-admin-backend
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: admin-front-end
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: admin-back-end-api
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              role: admin-back-end-api
+      ports:
+        - protocol: TCP
+          port: 80
+---
+# Политика для admin-back-end-api-app: Разрешает ему отправлять запросы admin-front-end-app
+# и принимать от него ответы, а также явное разрешение входящего трафика.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-admin-backend-to-admin-frontend
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: admin-back-end-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: admin-front-end
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              role: admin-front-end
+      ports:
+        - protocol: TCP
+          port: 80
+---
+# Политика для isolated-app: Явно запрещает весь входящий и исходящий трафик.
+# Это избыточно при наличии default-deny-all, но полезно для явного понимания.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-isolated-app
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: isolated
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress: [] # Запретить весь входящий трафик к isolated-app
+  egress: [] # Запретить весь исходящий трафик от isolated-app
