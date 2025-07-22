@@ -312,43 +312,43 @@ networkpolicy.networking.k8s.io/deny-isolated-app created
 
 ### 1. Проверка разрешенного трафика:
 
-`front-end-app -> back-end-api-app` (должно работать) 
-`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=front-end-test -- wget -qO- --timeout=2 http://back-end-api-app` 
-Ожидаемый результат: `<!DOCTYPE html><html><head><title>Welcome to nginx!</title>...` (HTML-код страницы Nginx).
+`front-end-app -> back-end-api-app` (должно работать)  
+`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=front-end-test -- wget -qO- --timeout=2 http://back-end-api-app`   
+Ожидаемый результат: `<!DOCTYPE html><html><head><title>Welcome to nginx!</title>...` (HTML-код страницы Nginx).  
 
-`back-end-api-app -> front-end-app` (должно работать, т.к. двусторонняя связь) 
-`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=backend-test -- wget -qO- --timeout=2 http://front-end-app`
-Ожидаемый результат: HTML-код страницы Nginx.
+`back-end-api-app -> front-end-app` (должно работать, т.к. двусторонняя связь)  
+`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=backend-test -- wget -qO- --timeout=2 http://front-end-app`  
+Ожидаемый результат: HTML-код страницы Nginx.  
 
-`admin-front-end-app -> admin-back-end-api-app` (должно работать) 
-`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=admin-frontend-test -- wget -qO- --timeout=2 http://admin-back-end-api-app`
-Ожидаемый результат: HTML-код страницы Nginx.
+`admin-front-end-app -> admin-back-end-api-app` (должно работать)  
+`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=admin-frontend-test -- wget -qO- --timeout=2 http://admin-back-end-api-app`  
+Ожидаемый результат: HTML-код страницы Nginx.  
 
-`admin-back-end-api-app -> admin-front-end-app` (должно работать, т.к. двусторонняя связь) 
-`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=admin-backend-test -- wget -qO- --timeout=2 http://admin-front-end-app`
-Ожидаемый результат: HTML-код страницы Nginx.
+`admin-back-end-api-app -> admin-front-end-app` (должно работать, т.к. двусторонняя связь)   
+`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=admin-backend-test -- wget -qO- --timeout=2 http://admin-front-end-app`  
+Ожидаемый результат: HTML-код страницы Nginx.  
 
 ### 2. Проверка запрещенного трафика:
 
-`front-end-app -> admin-back-end-api-app` (должно быть запрещено) 
-`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=front-end-test -- wget -qO- --timeout=2 http://admin-back-end-api-app`
-Ожидаемый результат: Ошибка таймаута (`wget: download timed out`) или ошибка соединения, без HTML-кода.
+`front-end-app -> admin-back-end-api-app` (должно быть запрещено)   
+`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=front-end-test -- wget -qO- --timeout=2 http://admin-back-end-api-app`  
+Ожидаемый результат: Ошибка таймаута (`wget: download timed out`) или ошибка соединения, без HTML-кода.  
 
-`admin-front-end-app -> back-end-api-app` (должно быть запрещено)
-`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=admin-frontend-test -- wget -qO- --timeout=2 http://back-end-api-app`
-Ожидаемый результат: Ошибка таймаута или ошибка соединения.
+`admin-front-end-app -> back-end-api-app` (должно быть запрещено)  
+`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=admin-frontend-test -- wget -qO- --timeout=2 http://back-end-api-app`  
+Ожидаемый результат: Ошибка таймаута или ошибка соединения.  
 
-Любой под (например, `front-end-app`) -> `isolated-app` (должно быть запрещено) 
-`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=front-end-test -- wget -qO- --timeout=2 http://isolated-app`
-Ожидаемый результат: Ошибка таймаута или ошибка соединения. 
+Любой под (например, `front-end-app`) -> `isolated-app` (должно быть запрещено)   
+`bash kubectl run test-$RANDOM --rm -i -t --image=alpine --labels role=front-end-test -- wget -qO- --timeout=2 http://isolated-app`  
+Ожидаемый результат: Ошибка таймаута или ошибка соединения.   
 
-Важно: `isolated-app` не имеет Service, поэтому http://isolated-app не сработает. Мы должны обратиться по имени пода (`isolated-app-xxxx-yyyy`) или по его IP-адресу. Но так как `isolated-app` не должен иметь Service, то обращение по имени Service не имеет смысла. Лучше всего для проверки изолированности попробовать запустить тестовый под и с него попробовать обратиться к `isolated-app` по имени его пода (не Service), предварительно узнав его имя: 
-`bash ISOLATED_POD_NAME=$(kubectl get pod -l role=isolated -o jsonpath='{.items[0].metadata.name}') kubectl run test-from-frontend-to-isolated --rm -i -t --image=alpine --labels role=front-end-test -- sh -c "wget -qO- --timeout=2 http://$ISOLATED_POD_NAME"` 
-Ожидаемый результат: Ошибка таймаута или соединения.
+Важно: `isolated-app` не имеет Service, поэтому http://isolated-app не сработает. Мы должны обратиться по имени пода (`isolated-app-xxxx-yyyy`) или по его IP-адресу. Но так как `isolated-app` не должен иметь Service, то обращение по имени Service не имеет смысла. Лучше всего для проверки изолированности попробовать запустить тестовый под и с него попробовать обратиться к `isolated-app` по имени его пода (не Service), предварительно узнав его имя:   
+`bash ISOLATED_POD_NAME=$(kubectl get pod -l role=isolated -o jsonpath='{.items[0].metadata.name}') kubectl run test-from-frontend-to-isolated --rm -i -t --image=alpine --labels role=front-end-test -- sh -c "wget -qO- --timeout=2 http://$ISOLATED_POD_NAME"`   
+Ожидаемый результат: Ошибка таймаута или соединения.  
 
-`isolated-app` -> любой другой под (например, `front-end-app`) (должно быть запрещено) Для этого нам нужно выполнить команду прямо внутри `isolated-app` (или создать тестовый под с той же меткой `role=isolated`). 
-`bash ISOLATED_POD_NAME=$(kubectl get pod -l role=isolated -o jsonpath='{.items[0].metadata.name}') kubectl exec -it $ISOLATED_POD_NAME -- sh -c "wget -qO- --timeout=2 http://front-end-app"` 
-Ожидаемый результат: Ошибка таймаута или соединения.
+`isolated-app` -> любой другой под (например, `front-end-app`) (должно быть запрещено) Для этого нам нужно выполнить команду прямо внутри `isolated-app` (или создать тестовый под с той же меткой `role=isolated`).   
+`bash ISOLATED_POD_NAME=$(kubectl get pod -l role=isolated -o jsonpath='{.items[0].metadata.name}') kubectl exec -it $ISOLATED_POD_NAME -- sh -c "wget -qO- --timeout=2 http://front-end-app"`   
+Ожидаемый результат: Ошибка таймаута или соединения.  
 
 ## Шаг 5: Освобождение ресурсов
 
